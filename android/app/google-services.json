@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "881289616895",
+    "project_id": "doctor-4dfc5",
+    "storage_bucket": "doctor-4dfc5.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:881289616895:android:f13d2eb9cf8a3727de9bca",
+        "android_client_info": {
+          "package_name": "com.doctor.doctor"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "881289616895-s6p2ai57c9urrthrpses9vbhfuv0uo5d.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAJkGNnyFGrL7VtlU5YRW_66IDXc3alTok"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "881289616895-s6p2ai57c9urrthrpses9vbhfuv0uo5d.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "881289616895-f7spiomd60mu6ltnhogqiaqo73p1goia.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.doctor.doctor"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
