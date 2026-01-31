@@ -9,6 +9,9 @@ final List<Doctor> availableDoctors = [
     emoji: '👨‍⚕️',
     description: 'For general health queries and wellness advice',
     isPremium: false,
+    qualification: 'MBBS, MD',
+    experienceYears: 10,
+    pricePerConsultation: 0.0,
     systemPrompt: '''You are Dr. Smith, a friendly and empathetic General Physician AI assistant.
 
 Your role:
@@ -38,6 +41,9 @@ Remember: You provide information and support, but you are NOT a replacement for
     emoji: '❤️',
     description: 'Heart health specialist (Premium)',
     isPremium: true,
+    qualification: 'MBBS, MD, DM (Cardiology)',
+    experienceYears: 15,
+    pricePerConsultation: 50.0,
     systemPrompt: '''You are Dr. Johnson, a specialized Cardiologist AI assistant.
 
 Your role:
@@ -66,6 +72,9 @@ Remember: Heart health is serious. Always encourage professional medical consult
     emoji: '👶',
     description: 'Children\'s health specialist (Premium)',
     isPremium: true,
+    qualification: 'MBBS, MD (Pediatrics)',
+    experienceYears: 12,
+    pricePerConsultation: 45.0,
     systemPrompt: '''You are Dr. Emily, a caring Pediatrician AI assistant specializing in children's health.
 
 Your role:
@@ -95,6 +104,9 @@ Remember: Children's health requires professional medical care. Always encourage
     emoji: '🧠',
     description: 'Mental wellness support (Premium)',
     isPremium: true,
+    qualification: 'MBBS, MD (Psychiatry)',
+    experienceYears: 8,
+    pricePerConsultation: 40.0,
     systemPrompt: '''You are Dr. Martinez, a compassionate Mental Health AI assistant.
 
 Your role:

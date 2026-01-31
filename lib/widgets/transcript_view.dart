@@ -54,11 +54,13 @@ class TranscriptMessage {
   final String text;
   final bool isUser;
   final DateTime timestamp;
+  final String? documentPath;
 
   const TranscriptMessage({
     required this.text,
     required this.isUser,
     required this.timestamp,
+    this.documentPath,
   });
 }
 
@@ -106,6 +108,43 @@ class TranscriptBubble extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Document preview if attached
+                  if (message.documentPath != null) ...[
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: isUser
+                            ? theme.colorScheme.primary.withOpacity(0.1)
+                            : theme.colorScheme.secondary.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            _getFileIcon(message.documentPath!),
+                            size: 16,
+                            color: isUser
+                                ? theme.colorScheme.onPrimaryContainer
+                                : theme.colorScheme.onSecondaryContainer,
+                          ),
+                          const SizedBox(width: 8),
+                          Flexible(
+                            child: Text(
+                              message.documentPath!.split('/').last,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: isUser
+                                    ? theme.colorScheme.onPrimaryContainer
+                                    : theme.colorScheme.onSecondaryContainer,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                   Text(
                     message.text,
                     style: theme.textTheme.bodyMedium?.copyWith(
@@ -142,6 +181,16 @@ class TranscriptBubble extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  IconData _getFileIcon(String path) {
+    final ext = path.split('.').last.toLowerCase();
+    if (['jpg', 'jpeg', 'png', 'gif'].contains(ext)) {
+      return Icons.image;
+    } else if (ext == 'pdf') {
+      return Icons.picture_as_pdf;
+    }
+    return Icons.insert_drive_file;
   }
 
   String _formatTime(DateTime time) {

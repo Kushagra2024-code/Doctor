@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import '../config/gemini_config.dart';
 import '../models/doctor.dart';
@@ -149,6 +150,98 @@ class GeminiService {
         );
       }
       throw Exception('Failed to get AI response: ${e.toString()}');
+    }
+  }
+
+  /// Send message with image/document analysis
+  Future<String> sendMessageWithDocument({
+    required Doctor doctor,
+    required String userMessage,
+    required Uint8List documentBytes,
+    required String mimeType,
+    List<String>? conversationHistory,
+  }) async {
+    try {
+      // Check for emergency keywords first
+      if (containsEmergencyKeyword(userMessage)) {
+        return getEmergencyResponse(userMessage);
+      }
+
+      // Build the prompt with system instructions
+      final promptParts = <String>[];
+      promptParts.add('SYSTEM INSTRUCTIONS:\n${doctor.systemPrompt}\n');
+
+      if (conversationHistory != null && conversationHistory.isNotEmpty) {
+        promptParts.add('\nCONVERSATION HISTORY:\n');
+        promptParts.addAll(conversationHistory);
+      }
+
+      // Add document analysis request
+      promptParts.add('\nUSER: $userMessage');
+      promptParts.add('\n[User has attached a medical document/image for analysis]');
+      promptParts.add('\nPlease analyze the attached document and provide insights based on it.\n\nASSISTANT:');
+
+      final prompt = promptParts.join('\n');
+
+      // Create content with text and inline data
+      final model = GeminiConfig.model;
+      final content = Content.multi([
+        TextPart(prompt),
+        DataPart(mimeType, documentBytes),
+      ]);
+
+      final response = await model.generateContent([content]);
+
+      if (response.text == null || response.text!.isEmpty) {
+        throw Exception('Empty response from Gemini');
+      }
+
+      return response.text!.trim();
+    } on GenerativeAIException catch (e) {
+      print('Gemini API Error with document: ${e.message}');
+      throw Exception('Gemini API error: ${e.message}');
+    } catch (e) {
+      throw Exception('Failed to analyze document: ${e.toString()}');
+    }
+  }
+
+  /// Analyze medical report/document without user message
+  Future<String> analyzeDocument({
+    required Doctor doctor,
+    required Uint8List documentBytes,
+    required String mimeType,
+    required String fileName,
+  }) async {
+    try {
+      final prompt = '''${doctor.systemPrompt}
+
+You are analyzing a medical document/report that a patient has uploaded. 
+File name: $fileName
+
+Please provide:
+1. A summary of what you see in the document
+2. Key findings or important information
+3. Any health-related insights based on the content
+4. Suggestions or recommendations
+
+Remember your safety guidelines: Do not provide diagnoses or prescribe treatments. Always recommend consulting with a healthcare professional for proper medical advice.''';
+
+      // Create content with text and inline data
+      final model = GeminiConfig.model;
+      final content = Content.multi([
+        TextPart(prompt),
+        DataPart(mimeType, documentBytes),
+      ]);
+
+      final response = await model.generateContent([content]);
+
+      if (response.text == null || response.text!.isEmpty) {
+        throw Exception('Empty response from Gemini');
+      }
+
+      return response.text!.trim();
+    } catch (e) {
+      throw Exception('Failed to analyze document: ${e.toString()}');
     }
   }
 

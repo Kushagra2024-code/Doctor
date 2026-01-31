@@ -1,9 +1,11 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import '../models/doctor.dart';
 import '../services/speech_service.dart';
 import '../services/gemini_service.dart';
 import '../services/tts_service.dart';
 import '../services/report_service.dart';
+import '../services/document_service.dart';
 import '../widgets/mic_button.dart';
 import '../widgets/transcript_view.dart';
 import 'report_screen.dart';
@@ -26,6 +28,7 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
   final GeminiService _geminiService = GeminiService();
   final TtsService _ttsService = TtsService();
   final ReportService _reportService = ReportService();
+  final DocumentService _documentService = DocumentService();
   final ScrollController _scrollController = ScrollController();
 
   final List<TranscriptMessage> _messages = [];
@@ -35,6 +38,7 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
   bool _isProcessing = false;
   String _currentTranscript = '';
   String? _errorMessage;
+  File? _selectedDocument;
 
   @override
   void initState() {
@@ -145,6 +149,7 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
         text: userText,
         isUser: true,
         timestamp: DateTime.now(),
+        documentPath: _selectedDocument?.path,
       ));
       _currentTranscript = '';
     });
@@ -155,12 +160,46 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
     _conversationHistory.add('USER: $userText');
 
     try {
-      // Get AI response
-      final aiResponse = await _geminiService.sendMessage(
-        doctor: widget.doctor,
-        userMessage: userText,
-        conversationHistory: _conversationHistory,
-      );
+      String aiResponse;
+      
+      // Check if document is attached
+      if (_selectedDocument != null) {
+        final bytes = await _documentService.readFileAsBytes(_selectedDocument!);
+        if (bytes != null) {
+          // Get mime type
+          String mimeType = 'image/jpeg';
+          final ext = _documentService.getFileExtension(_selectedDocument!.path);
+          if (ext == 'png') mimeType = 'image/png';
+          else if (ext == 'pdf') mimeType = 'application/pdf';
+          
+          // Send message with document
+          aiResponse = await _geminiService.sendMessageWithDocument(
+            doctor: widget.doctor,
+            userMessage: userText,
+            documentBytes: bytes,
+            mimeType: mimeType,
+            conversationHistory: _conversationHistory,
+          );
+        } else {
+          aiResponse = await _geminiService.sendMessage(
+            doctor: widget.doctor,
+            userMessage: userText,
+            conversationHistory: _conversationHistory,
+          );
+        }
+        
+        // Clear selected document after sending
+        setState(() {
+          _selectedDocument = null;
+        });
+      } else {
+        // Get AI response without document
+        aiResponse = await _geminiService.sendMessage(
+          doctor: widget.doctor,
+          userMessage: userText,
+          conversationHistory: _conversationHistory,
+        );
+      }
 
       // Add AI response to transcript
       setState(() {
@@ -192,6 +231,143 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
         _isProcessing = false;
       });
     }
+  }
+
+  Future<void> _pickDocument() async {
+    try {
+      final file = await _documentService.pickDocument();
+      if (file != null) {
+        setState(() {
+          _selectedDocument = file;
+        });
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Document selected: ${file.path.split('/').last}'),
+              backgroundColor: Colors.green,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to pick document: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _pickImage() async {
+    try {
+      final file = await _documentService.pickImageFromGallery();
+      if (file != null) {
+        setState(() {
+          _selectedDocument = file;
+        });
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Image selected: ${file.path.split('/').last}'),
+              backgroundColor: Colors.green,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to pick image: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _takePhoto() async {
+    try {
+      final file = await _documentService.takePhoto();
+      if (file != null) {
+        setState(() {
+          _selectedDocument = file;
+        });
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Photo captured'),
+              backgroundColor: Colors.green,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to take photo: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  void _showAttachmentOptions() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt),
+              title: const Text('Take Photo'),
+              onTap: () {
+                Navigator.pop(context);
+                _takePhoto();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text('Choose from Gallery'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickImage();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.insert_drive_file),
+              title: const Text('Pick Document/PDF'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickDocument();
+              },
+            ),
+            if (_selectedDocument != null)
+              ListTile(
+                leading: const Icon(Icons.clear, color: Colors.red),
+                title: const Text('Remove Attachment'),
+                onTap: () {
+                  Navigator.pop(context);
+                  setState(() {
+                    _selectedDocument = null;
+                  });
+                },
+              ),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _endConsultation() async {
@@ -390,12 +566,67 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
               ),
             ),
 
-          // Microphone button
+          // Selected document preview
+          if (_selectedDocument != null)
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.tertiaryContainer,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    _documentService.isImage(_selectedDocument!.path)
+                        ? Icons.image
+                        : Icons.insert_drive_file,
+                    color: theme.colorScheme.onTertiaryContainer,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      _selectedDocument!.path.split('/').last,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onTertiaryContainer,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    color: theme.colorScheme.onTertiaryContainer,
+                    onPressed: () {
+                      setState(() {
+                        _selectedDocument = null;
+                      });
+                    },
+                  ),
+                ],
+              ),
+            ),
+
+          // Buttons row
           Padding(
             padding: const EdgeInsets.all(24.0),
-            child: MicButton(
-              isListening: _isListening,
-              onPressed: _isProcessing ? () {} : _toggleListening,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Attachment button
+                FloatingActionButton(
+                  heroTag: 'attach',
+                  onPressed: _showAttachmentOptions,
+                  backgroundColor: theme.colorScheme.secondaryContainer,
+                  foregroundColor: theme.colorScheme.onSecondaryContainer,
+                  child: const Icon(Icons.attach_file),
+                ),
+                const SizedBox(width: 24),
+                // Microphone button
+                MicButton(
+                  isListening: _isListening,
+                  onPressed: _isProcessing ? () {} : _toggleListening,
+                ),
+              ],
             ),
           ),
         ],

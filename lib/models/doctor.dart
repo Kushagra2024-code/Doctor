@@ -6,6 +6,10 @@ class Doctor {
   final String systemPrompt;
   final bool isPremium;
   final String emoji;
+  final String? photoUrl;
+  final String qualification;
+  final int experienceYears;
+  final double pricePerConsultation;
 
   const Doctor({
     required this.id,
@@ -14,6 +18,10 @@ class Doctor {
     required this.systemPrompt,
     required this.isPremium,
     required this.emoji,
+    this.photoUrl,
+    required this.qualification,
+    required this.experienceYears,
+    required this.pricePerConsultation,
   });
 
   Map<String, dynamic> toJson() => {
@@ -23,6 +31,10 @@ class Doctor {
         'systemPrompt': systemPrompt,
         'isPremium': isPremium,
         'emoji': emoji,
+        'photoUrl': photoUrl,
+        'qualification': qualification,
+        'experienceYears': experienceYears,
+        'pricePerConsultation': pricePerConsultation,
       };
 
   factory Doctor.fromJson(Map<String, dynamic> json) => Doctor(
@@ -32,5 +44,9 @@ class Doctor {
         systemPrompt: json['systemPrompt'] as String,
         isPremium: json['isPremium'] as bool,
         emoji: json['emoji'] as String,
+        photoUrl: json['photoUrl'] as String?,
+        qualification: json['qualification'] as String,
+        experienceYears: json['experienceYears'] as int,
+        pricePerConsultation: (json['pricePerConsultation'] as num).toDouble(),
       );
 }
